@@ -11,7 +11,7 @@ BIBLE_API_BASE = "https://bible-api.com"
 SUPPORTED_TRANSLATIONS = {"kjv", "web"}
 
 
-@app.get("/")
+@app.get("/app")
 def home():
     return render_template("index.html")
 
