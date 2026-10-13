@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5ef">
+  <meta name="description" content="A quiet, comfortable place to read and explore the Bible online.">
+  <title>Stillword — Read the Bible</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Stillword home"><span class="brand-mark" aria-hidden="true">✳</span><span>stillword<span class="brand-period">.</span></span></a>
+    <p class="header-note">A quiet place for the Word</p>
+    <a class="header-link" href="#reader">Start reading <span aria-hidden="true">↘</span></a>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow"><span class="eyebrow-line"></span> SCRIPTURE FOR EVERY DAY</p>
+        <h1 id="hero-title">Make room for<br><em>the Word.</em></h1>
+        <p class="hero-description">Slow down, find a passage, and spend a little time with Scripture.</p>
+      </div>
+      <div class="hero-verse" aria-label="Psalm 46:10">
+        <span class="quote-mark" aria-hidden="true">“</span>
+        <p>Be still, and know that I am God.</p>
+        <span class="verse-reference">PSALM 46:10 <span class="tiny-star" aria-hidden="true">✳</span></span>
+      </div>
+    </section>
+
+    <section class="reader-shell" id="reader" aria-label="Bible reader">
+      <div class="reader-toolbar">
+        <div><span class="section-kicker">YOUR READING SPACE</span><h2>Open the Scriptures</h2></div>
+        <label class="translation-control" for="translation-select"><span>TRANSLATION</span>
+          <select id="translation-select"><option value="kjv">King James Version (KJV)</option><option value="web">World English Bible (WEB)</option></select>
+        </label>
+      </div>
+
+      <form id="reference-form" class="search-bar">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <label class="visually-hidden" for="reference-input">Search for a Bible reference or keyword</label>
+        <input id="reference-input" type="search" placeholder="Find a passage, e.g. John 3:16, or a keyword" autocomplete="off">
+        <button type="submit">Search <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="search-hint">Enter a passage such as <button class="text-button example-reference" type="button">John 3:16</button>, or search for a word in the chapter you are reading.</p>
+
+      <div class="reader-grid">
+        <aside class="navigation-panel" aria-label="Browse Bible">
+          <div class="panel-title-row"><h3>Browse the Bible</h3><span class="book-count">66 BOOKS</span></div>
+          <label class="field-label" for="testament-select">TESTAMENT</label>
+          <select id="testament-select"><option value="all">All books</option><option value="old">Old Testament</option><option value="new">New Testament</option></select>
+          <label class="field-label" for="book-select">BOOK</label><select id="book-select"></select>
+          <label class="field-label" for="chapter-select">CHAPTER</label><select id="chapter-select"></select>
+          <div class="quick-links">
+            <span class="field-label">QUICK START</span>
+            <button type="button" class="quick-link" data-book="Psalms" data-chapter="23"><span class="quick-icon">✳</span><span><strong>Psalm 23</strong><small>A song of trust</small></span><span class="quick-arrow">↗</span></button>
+            <button type="button" class="quick-link" data-book="John" data-chapter="3" data-verse="16"><span class="quick-icon">✳</span><span><strong>John 3:16</strong><small>The love of God</small></span><span class="quick-arrow">↗</span></button>
+            <button type="button" class="quick-link" data-book="Genesis" data-chapter="1"><span class="quick-icon">✳</span><span><strong>Genesis 1</strong><small>The beginning</small></span><span class="quick-arrow">↗</span></button>
+          </div>
+        </aside>
+
+        <article class="reading-panel" aria-live="polite" aria-busy="false">
+          <div class="reading-topline"><span id="testament-label" class="testament-pill">OLD TESTAMENT</span><span id="translation-label" class="reading-translation">KING JAMES VERSION</span></div>
+          <div class="chapter-heading">
+            <div><p class="chapter-overline">READING</p><h2 id="passage-title">Genesis <span>1</span></h2></div>
+            <button id="full-chapter-button" class="quiet-button" type="button" hidden>Read full chapter ↗</button>
+          </div>
+          <div id="status-message" class="status-message" role="status">Preparing your reading…</div>
+          <div id="verse-list" class="verse-list"></div>
+          <nav class="chapter-navigation" aria-label="Chapter navigation">
+            <button id="previous-chapter" class="chapter-nav-button" type="button"><span aria-hidden="true">←</span><span><small>PREVIOUS</small><strong>Chapter</strong></span></button>
+            <span id="chapter-position" class="chapter-position">Chapter 1</span>
+            <button id="next-chapter" class="chapter-nav-button next" type="button"><span><small>NEXT</small><strong>Chapter</strong></span><span aria-hidden="true">→</span></button>
+          </nav>
+          <p class="source-note">Passages are retrieved from bible-api.com. An internet connection is required.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="closing-note"><span class="closing-symbol" aria-hidden="true">✳</span><p>“Thy word is a lamp unto my feet, and a light unto my path.”</p><span>PSALM 119:105 · KJV</span></section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand footer-brand" href="/"><span class="brand-mark" aria-hidden="true">✳</span><span>stillword<span class="brand-period">.</span></span></a>
+    <p>A simple, open place to read Scripture.</p><a href="https://bible-api.com/" target="_blank" rel="noreferrer">Bible text API ↗</a>
+  </footer>
+</body>
+</html>
