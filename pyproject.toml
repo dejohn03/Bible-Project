@@ -1,0 +1,12 @@
+[project]
+name = "stillword"
+version = "1.0.0"
+description = "A quiet place to read the Bible."
+requires-python = ">=3.12"
+
+# Vercel's Python build resolves dependencies from this file with uv.
+# Keep these in step with requirements.txt, which Render and local setup use.
+dependencies = [
+    "flask>=3.0,<4.0",
+    "gunicorn>=22.0,<25.0",
+]

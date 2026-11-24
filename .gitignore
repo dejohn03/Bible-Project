@@ -9,3 +9,5 @@ venv/
 .coverage
 htmlcov/
 *.log
+.vercel
+uv.lock

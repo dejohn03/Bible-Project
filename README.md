@@ -34,6 +34,7 @@ turns an upstream failure into a message a reader can actually understand.
 | `public/styles.css` | All styling (dark theme) |
 | `public/favicon.svg` | Site icon |
 | `tests/test_app.py` | Test suite |
+| `pyproject.toml` | Dependencies for Vercel's uv build; mirrors `requirements.txt` |
 | `vercel.json` | Vercel function config: timeout and bundle exclusions |
 | `render.yaml` | Render deployment blueprint |
 
