@@ -74,6 +74,19 @@ async function fetchPassage(reference) {
   if (!Array.isArray(data.verses) || data.verses.length === 0) throw new Error("No verses were returned for that passage.");
   return data;
 }
+function appendHighlighted(parent, text, needle) {
+  if (!needle) { parent.append(document.createTextNode(text)); return; }
+  let cursor = 0, index = text.toLowerCase().indexOf(needle);
+  while (index !== -1) {
+    parent.append(document.createTextNode(text.slice(cursor, index)));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(index, index + needle.length);
+    parent.append(mark);
+    cursor = index + needle.length;
+    index = text.toLowerCase().indexOf(needle, cursor);
+  }
+  parent.append(document.createTextNode(text.slice(cursor)));
+}
 function renderVerses(verses, term) {
   ui.verses.replaceChildren();
   if (!verses.length) {
@@ -90,21 +103,7 @@ function renderVerses(verses, term) {
     const number = document.createElement("sup");
     number.className = "verse-number"; number.textContent = verse.verse;
     paragraph.append(number, document.createTextNode(" "));
-    const text = verse.text.trim();
-    if (!needle) {
-      paragraph.append(document.createTextNode(text));
-    } else {
-      let cursor = 0, index = text.toLowerCase().indexOf(needle);
-      while (index !== -1) {
-        paragraph.append(document.createTextNode(text.slice(cursor,index)));
-        const mark = document.createElement("mark");
-        mark.textContent = text.slice(index,index + needle.length);
-        paragraph.append(mark);
-        cursor = index + needle.length;
-        index = text.toLowerCase().indexOf(needle,cursor);
-      }
-      paragraph.append(document.createTextNode(text.slice(cursor)));
-    }
+    appendHighlighted(paragraph, verse.text.trim(), needle);
     ui.verses.append(paragraph);
   });
 }
@@ -161,15 +160,54 @@ async function searchReference(reference) {
     updateLabels();
   }
 }
-function searchKeyword(term) {
-  const needle = term.trim().toLowerCase();
+function renderSearchResults(data, term) {
+  ui.verses.replaceChildren();
+  if (!data.results.length) {
+    const message = document.createElement("p");
+    message.className = "empty-results";
+    message.textContent = "No verse in the Bible contains “" + term + "”. Try a different word or a passage reference.";
+    ui.verses.append(message);
+    return;
+  }
+  const needle = term.toLowerCase();
+  data.results.forEach(result => {
+    const item = document.createElement("p");
+    item.className = "verse search-result";
+    const link = document.createElement("button");
+    link.type = "button";
+    link.className = "result-reference";
+    link.textContent = result.reference;
+    link.addEventListener("click", () => {
+      ui.input.value = result.reference;
+      searchReference(result.reference);
+    });
+    item.append(link, document.createTextNode(" "));
+    appendHighlighted(item, result.text, needle);
+    ui.verses.append(item);
+  });
+}
+async function searchKeyword(term) {
+  const needle = term.trim();
   if (!needle) { setStatus("Enter a passage reference or keyword.", true); return; }
-  const matches = currentVerses.filter(verse => verse.text.toLowerCase().includes(needle));
   displayMode = "keyword";
   ui.fullChapter.hidden = true;
-  updateTitle("Search: “" + term.trim() + "”");
-  renderVerses(matches, term.trim());
-  setStatus(matches.length + " matching verse" + (matches.length === 1 ? "" : "s") + " in " + currentBook.name + " " + currentChapter + ".");
+  updateTitle("Search: “" + needle + "”");
+  ui.verses.replaceChildren();
+  setBusy(true);
+  setStatus("Searching the Bible for “" + needle + "”…");
+  try {
+    const response = await fetch("/api/search?q=" + encodeURIComponent(needle));
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not search just now.");
+    renderSearchResults(data, needle);
+    const noun = data.total === 1 ? "verse" : "verses";
+    const more = data.shown < data.total ? " Showing the first " + data.shown + "." : "";
+    setStatus(data.total + " " + noun + " in the Bible contain “" + needle + "”." + more + " Results use the King James Version.");
+  } catch (error) {
+    setStatus(error.message + " Check your connection and try again.", true);
+  } finally {
+    setBusy(false);
+  }
 }
 ui.testament.addEventListener("change", () => { populateBooks(currentBook.name); loadChapter(currentBook,1); });
 ui.book.addEventListener("change", () => {

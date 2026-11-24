@@ -560,6 +560,33 @@ select {
     line-height: 1.7;
 }
 
+.search-result {
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.result-reference {
+    display: inline-block;
+    margin-right: 4px;
+    padding: 2px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: var(--green);
+    font-family: var(--sans);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.result-reference:hover,
+.result-reference:focus-visible {
+    background: #383838;
+    color: #ffffff;
+}
+
 .chapter-navigation {
     display: flex;
     align-items: center;

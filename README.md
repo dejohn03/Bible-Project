@@ -15,6 +15,7 @@ The browser never talks to the Bible service directly. Flask sits in the middle:
 
 ```
 browser  ->  Flask (/api/passage)  ->  bible-api.com
+browser  ->  Flask (/api/search)   ->  data/kjv.json (bundled)
                   |
                   +-- in-memory cache, retries, honest error messages
 ```
@@ -33,6 +34,7 @@ turns an upstream failure into a message a reader can actually understand.
 | `public/app.js` | Book list, navigation, search, verse rendering |
 | `public/styles.css` | All styling (dark theme) |
 | `public/favicon.svg` | Site icon |
+| `data/kjv.json` | Public-domain King James text, used for whole-Bible search |
 | `tests/test_app.py` | Test suite |
 | `pyproject.toml` | Dependencies for Vercel's uv build; mirrors `requirements.txt` |
 | `vercel.json` | Vercel function config: timeout and bundle exclusions |
@@ -90,6 +92,33 @@ curl "http://localhost:5000/api/passage?reference=John%203:16&translation=kjv"
 service as "passage not found", which sent readers looking for a mistake in
 their own reference.
 
+### `GET /api/search`
+
+Searches every verse of the Bible and returns matches with their references.
+
+```bash
+curl "http://localhost:5000/api/search?q=shepherd"
+```
+
+```json
+{
+  "query": "shepherd",
+  "translation": "kjv",
+  "total": 74,
+  "shown": 74,
+  "results": [
+    { "reference": "Genesis 46:32", "book": "Genesis", "chapter": 46, "verse": 32, "text": "..." }
+  ]
+}
+```
+
+`total` counts every match; `shown` is capped at 200. The search index is the
+King James Version and is served from `data/kjv.json`, so searching never calls
+the upstream API and cannot be rate limited. Opening a result loads that chapter
+in whichever translation the reader has selected.
+
+Returns `400` if the term is shorter than two characters or longer than 100.
+
 ### `GET /health`
 
 Returns `{"status": "ok"}`. Used by the hosting health check.
@@ -119,6 +148,8 @@ Two things to know:
   produces `/styles.css` locally and in production.
 - The passage cache is per function instance, so it is not shared between
   instances. It still saves upstream calls on warm instances.
+- `data/kjv.json` is about 4 MB and must stay inside the function bundle,
+  since search reads it from disk. Do not move it into `public/`.
 
 ### Render
 
@@ -129,5 +160,8 @@ gunicorn app:app --workers 2 --threads 4 --timeout 30
 ```
 
 ## License
+
+The bundled King James text in `data/kjv.json` is public domain in most
+jurisdictions. It remains subject to Crown copyright in the United Kingdom.
 
 MIT. See [LICENSE](LICENSE).

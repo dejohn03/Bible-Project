@@ -24,7 +24,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request
 
 # Assets live in public/ because Vercel serves that directory from its CDN and
 # explicitly does not support Flask's default static folder. An empty
@@ -44,6 +44,24 @@ CACHE_TTL = 6 * 60 * 60  # six hours; the text is immutable in practice
 CACHE_MAX_ENTRIES = 512
 
 CACHE_CONTROL = "public, max-age=3600"
+
+SEARCH_MIN_LENGTH = 2
+SEARCH_MAX_LENGTH = 100
+SEARCH_RESULT_LIMIT = 200
+SEARCH_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kjv.json")
+
+# The icon is kept here rather than read from public/favicon.svg. Vercel serves
+# public/ from its CDN and leaves it out of the function bundle, so reading the
+# file from disk works locally but returns 404 in production.
+FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img"'
+    ' aria-label="Stillword">'
+    '<rect width="32" height="32" rx="7" fill="#101010"/>'
+    '<g stroke="#d6b879" stroke-width="2.6" stroke-linecap="round">'
+    '<path d="M16 6.5v19"/><path d="M6.5 16h19"/>'
+    '<path d="M9.3 9.3l13.4 13.4"/><path d="M22.7 9.3L9.3 22.7"/>'
+    "</g></svg>"
+)
 
 CONTENT_SECURITY_POLICY = "; ".join(
     (
@@ -222,6 +240,99 @@ def get_passage():
     return response
 
 
+_search_index = None
+_search_index_lock = threading.Lock()
+
+
+def _load_search_index():
+    """Load the bundled KJV text once per process.
+
+    bible-api.com has no search endpoint and rejects multi-chapter ranges, so
+    searching through it would cost one request per chapter. The King James text
+    is public domain, so it ships with the app instead: searching is instant and
+    never touches the network.
+    """
+    global _search_index
+    if _search_index is not None:
+        return _search_index
+    with _search_index_lock:
+        if _search_index is not None:
+            return _search_index
+        with open(SEARCH_DATA_PATH, encoding="utf-8") as handle:
+            payload = json.load(handle)
+        records = []
+        for book in payload["books"]:
+            name = book["name"]
+            for chapter_number, verses in enumerate(book["chapters"], start=1):
+                for verse_number, text in enumerate(verses, start=1):
+                    records.append(
+                        (
+                            f"{name} {chapter_number}:{verse_number}",
+                            name,
+                            chapter_number,
+                            verse_number,
+                            text,
+                            text.lower(),
+                        )
+                    )
+        _search_index = records
+        return _search_index
+
+
+def search_bible(term, limit=SEARCH_RESULT_LIMIT):
+    """Return every verse containing ``term``, capped at ``limit`` results.
+
+    ``total`` counts all matches so the reader can be told how many exist even
+    when only the first page is shown.
+    """
+    needle = term.lower()
+    total = 0
+    results = []
+    for reference, book, chapter, verse, text, lowered in _load_search_index():
+        if needle in lowered:
+            total += 1
+            if len(results) < limit:
+                results.append(
+                    {
+                        "reference": reference,
+                        "book": book,
+                        "chapter": chapter,
+                        "verse": verse,
+                        "text": text,
+                    }
+                )
+    return total, results
+
+
+@app.get("/api/search")
+def api_search():
+    """Search the whole Bible for a word or phrase.
+
+    Results carry the King James text. Opening one loads the chapter in whichever
+    translation the reader has selected.
+    """
+    query = request.args.get("q", "").strip()
+
+    if len(query) < SEARCH_MIN_LENGTH:
+        return jsonify({"error": "Search for at least two characters."}), 400
+
+    if len(query) > SEARCH_MAX_LENGTH:
+        return jsonify({"error": "That search term is too long."}), 400
+
+    total, results = search_bible(query)
+    response = jsonify(
+        {
+            "query": query,
+            "translation": "kjv",
+            "total": total,
+            "shown": len(results),
+            "results": results,
+        }
+    )
+    response.headers["Cache-Control"] = "public, max-age=600"
+    return response
+
+
 @app.get("/health")
 def health():
     """A small endpoint that hosting services can use to check the app."""
@@ -231,7 +342,7 @@ def health():
 @app.get("/favicon.ico")
 def favicon():
     """Answer the browser's default icon request so it is not a 404."""
-    return send_from_directory(app.static_folder, "favicon.svg", mimetype="image/svg+xml")
+    return Response(FAVICON_SVG, mimetype="image/svg+xml")
 
 
 @app.after_request

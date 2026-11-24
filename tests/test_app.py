@@ -310,3 +310,62 @@ def test_unknown_page_returns_the_html_error_page(client):
     response = client.get("/no-such-page")
     assert response.status_code == 404
     assert "not in the book" in response.get_data(as_text=True)
+
+
+# --------------------------------------------------------------------------
+# Whole-Bible search
+# --------------------------------------------------------------------------
+
+
+def test_search_rejects_a_term_that_is_too_short(client):
+    response = client.get("/api/search?q=a")
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+def test_search_rejects_an_overlong_term(client):
+    response = client.get("/api/search?q=" + "a" * 101)
+    assert response.status_code == 400
+
+
+def test_search_finds_a_known_verse(client):
+    response = client.get("/api/search?q=shepherd")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["total"] > 0
+    assert "Psalms 23:1" in [result["reference"] for result in data["results"]]
+
+
+def test_search_results_carry_the_fields_the_page_needs(client):
+    data = client.get("/api/search?q=shepherd").get_json()
+    result = data["results"][0]
+    for field in ("reference", "book", "chapter", "verse", "text"):
+        assert field in result
+    assert data["translation"] == "kjv"
+
+
+def test_search_is_case_insensitive(client):
+    lower = client.get("/api/search?q=shepherd").get_json()
+    upper = client.get("/api/search?q=SHEPHERD").get_json()
+    assert lower["total"] == upper["total"]
+    assert lower["total"] > 0
+
+
+def test_search_reports_no_matches_for_nonsense(client):
+    data = client.get("/api/search?q=zzzzqqqqxx").get_json()
+    assert data["total"] == 0
+    assert data["results"] == []
+
+
+def test_search_caps_results_but_reports_the_true_total(client):
+    data = client.get("/api/search?q=the").get_json()
+    assert data["total"] > app_module.SEARCH_RESULT_LIMIT
+    assert data["shown"] == app_module.SEARCH_RESULT_LIMIT
+    assert len(data["results"]) == app_module.SEARCH_RESULT_LIMIT
+
+
+def test_search_covers_the_whole_bible_not_one_chapter(client):
+    """The old keyword search only looked at the chapter on screen."""
+    data = client.get("/api/search?q=shepherd").get_json()
+    books = {result["book"] for result in data["results"]}
+    assert len(books) > 1
