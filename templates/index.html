@@ -55,9 +55,20 @@
           <div class="panel-title-row"><h3>Browse the Bible</h3><span class="book-count">66 BOOKS</span></div>
           <label class="field-label" for="testament-select">TESTAMENT</label>
           <select id="testament-select"><option value="all">All books</option><option value="old">Old Testament</option><option value="new">New Testament</option></select>
-          <label class="field-label" for="book-select">BOOK</label><select id="book-select"></select>
-          <label class="field-label" for="chapter-select">CHAPTER</label><select id="chapter-select"></select>
-          <label class="field-label" for="verse-select">VERSE</label><select id="verse-select"></select>
+          <div class="picker-grid">
+            <div class="picker-field">
+              <label class="field-label" for="book-select">BOOK</label>
+              <select id="book-select"></select>
+            </div>
+            <div class="picker-field">
+              <label class="field-label" for="chapter-select">CHAPTER</label>
+              <select id="chapter-select"></select>
+            </div>
+            <div class="picker-field">
+              <label class="field-label" for="verse-select">VERSE</label>
+              <select id="verse-select"></select>
+            </div>
+          </div>
           <div class="quick-links">
             <span class="field-label">QUICK START</span>
             <button type="button" class="quick-link" data-book="Psalms" data-chapter="23"><span class="quick-icon">✳</span><span><strong>Psalm 23</strong><small>A song of trust</small></span><span class="quick-arrow">↗</span></button>

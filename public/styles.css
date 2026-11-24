@@ -372,6 +372,37 @@ select {
     font-size: 11px;
 }
 
+/* Book, chapter and verse are three choices the reader makes together, so each
+   gets its own box instead of reading as another stacked dropdown. */
+.picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 18px;
+}
+
+.picker-field {
+    min-width: 0;
+    padding: 8px 9px 9px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #202020;
+}
+
+.picker-field .field-label {
+    margin: 0 0 5px;
+    font-size: 7px;
+    letter-spacing: .11em;
+}
+
+.picker-field select {
+    padding: 0 15px 0 0;
+    border: 0;
+    background-color: transparent;
+    background-position: right 0 center;
+    font-size: 11px;
+}
+
 .quick-links {
     margin-top: 35px;
     padding-top: 17px;
@@ -924,4 +955,10 @@ select {
 .error-action:hover {
     border-color: var(--green);
     color: var(--green-dark);
+}
+
+@media (max-width: 520px) {
+    .picker-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
