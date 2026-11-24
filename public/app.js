@@ -592,7 +592,10 @@ if (ui.notepadClear) ui.notepadClear.addEventListener("click", () => {
   ui.notepadText.focus();
 });
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && ui.notepad && ui.notepad.classList.contains("open")) setNotesOpen(false);
+  if (event.key !== "Escape") return;
+  // Escape backs out of whatever the reader opened: the notepad, or the voice.
+  if (ui.notepad && ui.notepad.classList.contains("open")) setNotesOpen(false);
+  if (speech.state !== "idle") stopSpeech();
 });
 loadNotes();
 updateListenButton();
