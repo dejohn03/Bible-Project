@@ -10,7 +10,7 @@ const ui = {
   title: el("passage-title"), testamentLabel: el("testament-label"), translationLabel: el("translation-label"),
   status: el("status-message"), verses: el("verse-list"), previous: el("previous-chapter"),
   next: el("next-chapter"), position: el("chapter-position"), fullChapter: el("full-chapter-button"),
-  panel: document.querySelector(".reading-panel")
+  verse: el("verse-select"), panel: document.querySelector(".reading-panel")
 };
 let currentBook = BOOKS[0], currentChapter = 1, currentVerses = [], displayMode = "chapter";
 
@@ -70,6 +70,23 @@ function populateChapters(preferredChapter) {
   }
   ui.chapter.value = String(currentChapter);
 }
+function populateVerses(count) {
+  ui.verse.replaceChildren();
+  const all = document.createElement("option");
+  all.value = "all"; all.textContent = "All verses"; ui.verse.append(all);
+  for (let number = 1; number <= count; number += 1) {
+    const option = document.createElement("option");
+    option.value = String(number); option.textContent = "Verse " + number; ui.verse.append(option);
+  }
+  ui.verse.value = "all";
+}
+function focusVerse(number) {
+  const node = document.getElementById("verse-" + number);
+  if (!node) return;
+  node.scrollIntoView({ behavior: "smooth", block: "center" });
+  node.classList.add("verse-focus");
+  setTimeout(() => node.classList.remove("verse-focus"), 1800);
+}
 function updateTitle(title) {
   ui.title.replaceChildren(document.createTextNode(title || (currentBook.name + " " + currentChapter)));
 }
@@ -121,6 +138,7 @@ function renderVerses(verses, term) {
     const paragraph = document.createElement("p");
     paragraph.className = "verse";
     const number = document.createElement("sup");
+    paragraph.id = "verse-" + verse.verse;
     number.className = "verse-number"; number.textContent = verse.verse;
     paragraph.append(number, document.createTextNode(" "));
     appendHighlighted(paragraph, verse.text.trim(), needle);
@@ -141,6 +159,7 @@ async function loadChapter(book, chapter) {
     const data = await fetchPassage(currentBook.name + " " + currentChapter);
     currentVerses = data.verses;
     renderVerses(currentVerses, "");
+    populateVerses(currentVerses.length);
     setStatus("");
     ui.input.value = "";
   } catch (error) {
@@ -178,6 +197,7 @@ async function searchReference(reference) {
       populateBooks(book.name); populateChapters(chapter);
     }
     currentVerses = data.verses;
+    populateVerses(currentVerses.length);
     displayMode = "passage";
     renderVerses(currentVerses, "");
     updateTitle(data.reference || reference);
@@ -259,6 +279,7 @@ ui.book.addEventListener("change", () => {
   if (selected) { currentBook = selected; populateChapters(1); loadChapter(currentBook,1); }
 });
 ui.chapter.addEventListener("change", () => loadChapter(currentBook,Number(ui.chapter.value)));
+ui.verse.addEventListener("change", () => { if (ui.verse.value !== "all") focusVerse(ui.verse.value); });
 ui.translation.addEventListener("change", () => {
   if (displayMode === "passage" && ui.input.value.trim()) searchReference(ui.input.value.trim());
   else loadChapter(currentBook,currentChapter);

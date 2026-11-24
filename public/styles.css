@@ -540,8 +540,14 @@ select {
     margin-right: 5px;
     color: var(--green);
     font-family: var(--sans);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
+}
+
+.verse-focus {
+    background: rgba(126, 168, 138, .16);
+    border-radius: 4px;
+    transition: background .4s ease;
 }
 
 .verse mark {
