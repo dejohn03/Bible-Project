@@ -80,13 +80,6 @@ function populateVerses(count) {
   }
   ui.verse.value = "all";
 }
-function focusVerse(number) {
-  const node = document.getElementById("verse-" + number);
-  if (!node) return;
-  node.scrollIntoView({ behavior: "smooth", block: "center" });
-  node.classList.add("verse-focus");
-  setTimeout(() => node.classList.remove("verse-focus"), 1800);
-}
 function updateTitle(title) {
   ui.title.replaceChildren(document.createTextNode(title || (currentBook.name + " " + currentChapter)));
 }
@@ -171,6 +164,27 @@ async function loadChapter(book, chapter) {
     updateLabels();
   }
 }
+async function loadVerse(number) {
+  // Choosing a verse should show that verse, not leave the whole chapter up.
+  displayMode = "verse";
+  const label = currentBook.name + " " + currentChapter + ":" + number;
+  updateTitle(label);
+  updateLabels();
+  setBusy(true);
+  setStatus("Loading " + label + "…");
+  try {
+    const data = await fetchPassage(label);
+    currentVerses = data.verses;
+    renderVerses(currentVerses, "");
+    ui.fullChapter.hidden = false;
+    setStatus("");
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    setBusy(false);
+    updateLabels();
+  }
+}
 async function searchReference(reference) {
   // A chapter beyond the end of the book is not something to search for, and an
   // empty result set would look broken. Say how many chapters exist instead.
@@ -197,7 +211,7 @@ async function searchReference(reference) {
       populateBooks(book.name); populateChapters(chapter);
     }
     currentVerses = data.verses;
-    populateVerses(currentVerses.length);
+    populateVerses(parsed && parsed.verse ? 0 : currentVerses.length);
     displayMode = "passage";
     renderVerses(currentVerses, "");
     updateTitle(data.reference || reference);
@@ -279,7 +293,10 @@ ui.book.addEventListener("change", () => {
   if (selected) { currentBook = selected; populateChapters(1); loadChapter(currentBook,1); }
 });
 ui.chapter.addEventListener("change", () => loadChapter(currentBook,Number(ui.chapter.value)));
-ui.verse.addEventListener("change", () => { if (ui.verse.value !== "all") focusVerse(ui.verse.value); });
+ui.verse.addEventListener("change", () => {
+  if (ui.verse.value === "all") { loadChapter(currentBook, currentChapter); return; }
+  loadVerse(Number(ui.verse.value));
+});
 ui.translation.addEventListener("change", () => {
   if (displayMode === "passage" && ui.input.value.trim()) searchReference(ui.input.value.trim());
   else loadChapter(currentBook,currentChapter);

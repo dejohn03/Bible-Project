@@ -544,12 +544,6 @@ select {
     font-weight: 700;
 }
 
-.verse-focus {
-    background: rgba(126, 168, 138, .16);
-    border-radius: 4px;
-    transition: background .4s ease;
-}
-
 .verse mark {
     padding: 0 2px;
     border-radius: 2px;
