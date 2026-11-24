@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101010">
+  <meta name="robots" content="noindex">
+  <title>Page not found · Stillword</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="error-page">
+    <p class="error-code">404</p>
+    <h1>This page is not in the book.</h1>
+    <p class="error-text">The address you followed does not lead to a page here.</p>
+    <a class="error-action" href="/">Back to the reader <span aria-hidden="true">→</span></a>
+  </main>
+</body>
+</html>

@@ -20,6 +20,15 @@ function findBook(name) {
   const aliases = {psalm:"psalms",songofsongs:"songofsolomon"};
   return BOOKS.find(book => normalise(book.name) === (aliases[wanted] || wanted)) || null;
 }
+function looksLikeReference(query) {
+  // "John 3:16", "Psalm 23", "Genesis 1"
+  if (/\d+\s*:\s*\d+/.test(query)) return true;
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  for (let take = Math.min(4, words.length); take >= 1; take -= 1) {
+    if (findBook(words.slice(0, take).join(" "))) return true;
+  }
+  return false;
+}
 function setStatus(message, error) {
   ui.status.textContent = message || "";
   ui.status.className = error ? "status-message error" : "status-message";
@@ -157,6 +166,7 @@ function searchKeyword(term) {
   if (!needle) { setStatus("Enter a passage reference or keyword.", true); return; }
   const matches = currentVerses.filter(verse => verse.text.toLowerCase().includes(needle));
   displayMode = "keyword";
+  ui.fullChapter.hidden = true;
   updateTitle("Search: “" + term.trim() + "”");
   renderVerses(matches, term.trim());
   setStatus(matches.length + " matching verse" + (matches.length === 1 ? "" : "s") + " in " + currentBook.name + " " + currentChapter + ".");
@@ -175,7 +185,7 @@ ui.form.addEventListener("submit", event => {
   event.preventDefault();
   const query = ui.input.value.trim();
   if (!query) { setStatus("Enter a passage reference or keyword.",true); return; }
-  if (/\d/.test(query) && /\d\s*(?::|$)/.test(query)) searchReference(query);
+  if (looksLikeReference(query)) searchReference(query);
   else searchKeyword(query);
 });
 document.querySelector(".example-reference").addEventListener("click", () => {

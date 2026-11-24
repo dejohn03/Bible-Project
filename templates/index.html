@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f5ef">
+  <meta name="theme-color" content="#101010">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <meta name="description" content="A quiet, comfortable place to read and explore the Bible online.">
   <title>Stillword — Read the Bible</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,7 +45,7 @@
       <form id="reference-form" class="search-bar">
         <span class="search-icon" aria-hidden="true">⌕</span>
         <label class="visually-hidden" for="reference-input">Search for a Bible reference or keyword</label>
-        <input id="reference-input" type="search" placeholder="Find a passage, e.g. John 3:16, or a keyword" autocomplete="off">
+        <input id="reference-input" type="search" placeholder="Find a passage, e.g. John 3:16, or a word in this chapter" autocomplete="off">
         <button type="submit">Search <span aria-hidden="true">→</span></button>
       </form>
       <p class="search-hint">Enter a passage such as <button class="text-button example-reference" type="button">John 3:16</button>, or search for a word in the chapter you are reading.</p>
