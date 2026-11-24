@@ -62,15 +62,9 @@ DICTIONARY_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "dictiona
 _SEARCH_VOCAB = None
 APPROX_MATCH_RATIO = 0.5
 STOPWORDS = frozenset(
-    {
-        "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "for",
-        "from", "had", "has", "have", "he", "her", "him", "his", "i", "if", "in",
-        "into", "is", "it", "its", "me", "my", "no", "nor", "not", "of", "on",
-        "or", "our", "she", "so", "than", "that", "the", "their", "them", "then",
-        "there", "these", "they", "this", "those", "to", "too", "us", "was", "we",
-        "were", "what", "when", "where", "which", "who", "whom", "why", "will",
-        "with", "you", "your",
-    }
+    "a an and are as at be been but by for from had has have he her him his i if in into is it "
+    "its me my no nor not of on or our she so than that the their them then there these they this "
+    "those to too us was we were what when where which who whom why will with you your".split()  # noqa: SIM905 - a word list reads better as words
 )
 
 # The icon is kept here rather than read from public/favicon.svg. Vercel serves
