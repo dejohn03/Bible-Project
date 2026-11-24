@@ -369,3 +369,20 @@ def test_search_covers_the_whole_bible_not_one_chapter(client):
     data = client.get("/api/search?q=shepherd").get_json()
     books = {result["book"] for result in data["results"]}
     assert len(books) > 1
+
+
+def test_upstream_bad_reference_is_treated_as_not_found(client, monkeypatch):
+    """bible-api.com answers an impossible reference with 400, not 404.
+
+    Reporting that as "service unavailable" was misleading, and it stopped the
+    page from turning the input into a search.
+    """
+
+    def raise_bad_request(*args, **kwargs):
+        raise HTTPError("https://bible-api.com/x", 400, "Bad Request", None, io.BytesIO(b""))
+
+    monkeypatch.setattr(app_module, "urlopen", raise_bad_request)
+    response = client.get("/api/passage", query_string={"reference": "John 99"})
+
+    assert response.status_code == 404
+    assert "could not find" in response.get_json()["error"].lower()

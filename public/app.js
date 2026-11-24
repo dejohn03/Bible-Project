@@ -20,14 +20,21 @@ function findBook(name) {
   const aliases = {psalm:"psalms",songofsongs:"songofsolomon"};
   return BOOKS.find(book => normalise(book.name) === (aliases[wanted] || wanted)) || null;
 }
+function parseReference(query) {
+  // A reference needs a chapter number. A bare book name is not one: "Mark"
+  // searches for the word, while "Mark 1" and "Mark 1:2" open the passage.
+  const match = query.trim().match(/^(.+?)\s+(\d+)(?:\s*:\s*(\d+)(?:\s*[-–]\s*(\d+))?)?$/);
+  if (!match) return null;
+  const book = findBook(match[1]);
+  if (!book) return null;
+  return {
+    book: book.name,
+    chapter: Number(match[2]),
+    verse: match[3] ? Number(match[3]) : null,
+  };
+}
 function looksLikeReference(query) {
-  // "John 3:16", "Psalm 23", "Genesis 1"
-  if (/\d+\s*:\s*\d+/.test(query)) return true;
-  const words = query.trim().split(/\s+/).filter(Boolean);
-  for (let take = Math.min(4, words.length); take >= 1; take -= 1) {
-    if (findBook(words.slice(0, take).join(" "))) return true;
-  }
-  return false;
+  return parseReference(query) !== null;
 }
 function setStatus(message, error) {
   ui.status.textContent = message || "";
@@ -70,7 +77,11 @@ async function fetchPassage(reference) {
   const query = new URLSearchParams({reference, translation:ui.translation.value});
   const response = await fetch("/api/passage?" + query.toString());
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Could not load that passage.");
+  if (!response.ok) {
+    const error = new Error(data.error || "Could not load that passage.");
+    error.status = response.status;
+    throw error;
+  }
   if (!Array.isArray(data.verses) || data.verses.length === 0) throw new Error("No verses were returned for that passage.");
   return data;
 }
@@ -136,6 +147,7 @@ async function searchReference(reference) {
   setBusy(true);
   setStatus("Looking up " + reference + "…");
   ui.verses.replaceChildren();
+  let searchInstead = false;
   try {
     const data = await fetchPassage(reference);
     const book = findBook(data.verses[0].book_name || "");
@@ -154,11 +166,18 @@ async function searchReference(reference) {
     ui.input.value = reference;
     setStatus("");
   } catch (error) {
-    setStatus(error.message + " You can also choose a book and chapter from the browse panel.", true);
+    // A reference that does not exist should still give the reader something:
+    // fall back to searching the words they typed.
+    if (error.status === 400 || error.status === 404) {
+      searchInstead = true;
+    } else {
+      setStatus(error.message + " You can also choose a book and chapter from the browse panel.", true);
+    }
   } finally {
     setBusy(false);
     updateLabels();
   }
+  if (searchInstead) await searchKeyword(reference);
 }
 function renderSearchResults(data, term) {
   ui.verses.replaceChildren();

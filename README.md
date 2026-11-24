@@ -112,7 +112,12 @@ curl "http://localhost:5000/api/search?q=shepherd"
 }
 ```
 
-`total` counts every match; `shown` is capped at 200. The search index is the
+`total` counts every match; `shown` is capped at 200.
+
+The page sends input to this endpoint unless it parses as a reference with a
+chapter number, such as `Mark 1` or `John 3:16`. A bare book name like `Mark`
+searches for the word instead. If a reference lookup comes back not found, the
+page falls back to searching the same text rather than dead-ending. The search index is the
 King James Version and is served from `data/kjv.json`, so searching never calls
 the upstream API and cannot be rate limited. Opening a result loads that chapter
 in whichever translation the reader has selected.

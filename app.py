@@ -172,7 +172,10 @@ def fetch_upstream(reference, translation):
                     time.sleep(_retry_pause(attempt))
                     continue
                 break
-            if error.code == 404:
+            # A bad reference comes back as 400 and a missing one as 404. Both
+            # mean "no such passage", which the page turns into a search rather
+            # than telling the reader the service is broken.
+            if error.code in (400, 404):
                 raise UpstreamError(MISSING_MESSAGE, status=404) from error
             raise UpstreamError(UNAVAILABLE_MESSAGE, status=502) from error
         except (URLError, TimeoutError) as error:
