@@ -16,10 +16,12 @@ Two things this module is deliberate about:
 from __future__ import annotations
 
 import json
+import math
 import os
 import threading
 import time
 from collections import OrderedDict
+from functools import lru_cache
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -49,6 +51,23 @@ SEARCH_MIN_LENGTH = 2
 SEARCH_MAX_LENGTH = 100
 SEARCH_RESULT_LIMIT = 200
 SEARCH_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kjv.json")
+
+# When an exact phrase finds nothing, verses are scored on how many of the
+# query's significant words they contain. Half the words is enough: a reader
+# who misremembers one word should still land on the verse they meant.
+_SEARCH_VOCAB = None
+APPROX_MATCH_RATIO = 0.5
+STOPWORDS = frozenset(
+    {
+        "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "for",
+        "from", "had", "has", "have", "he", "her", "him", "his", "i", "if", "in",
+        "into", "is", "it", "its", "me", "my", "no", "nor", "not", "of", "on",
+        "or", "our", "she", "so", "than", "that", "the", "their", "them", "then",
+        "there", "these", "they", "this", "those", "to", "too", "us", "was", "we",
+        "were", "what", "when", "where", "which", "who", "whom", "why", "will",
+        "with", "you", "your",
+    }
+)
 
 # The icon is kept here rather than read from public/favicon.svg. Vercel serves
 # public/ from its CDN and leaves it out of the function bundle, so reading the
@@ -307,6 +326,143 @@ def search_bible(term, limit=SEARCH_RESULT_LIMIT):
     return total, results
 
 
+def _tokens(text):
+    """Lowercased words, punctuation stripped."""
+    cleaned = "".join(ch.lower() if (ch.isalnum() or ch == "'") else " " for ch in text)
+    return [raw.strip("'") for raw in cleaned.split() if raw.strip("'")]
+
+
+def _search_vocabulary():
+    """Every distinct word in the Bible, built once alongside the index."""
+    global _SEARCH_VOCAB
+    if _SEARCH_VOCAB is None:
+        words = set()
+        for entry in _load_search_index():
+            words.update(_tokens(entry[4]))
+        _SEARCH_VOCAB = words
+    return _SEARCH_VOCAB
+
+
+def _within_distance(a, b, limit):
+    """True when ``a`` and ``b`` are at most ``limit`` edits apart."""
+    if abs(len(a) - len(b)) > limit:
+        return False
+    if a == b:
+        return True
+    previous = list(range(len(b) + 1))
+    for i, char_a in enumerate(a, 1):
+        current = [i]
+        for j, char_b in enumerate(b, 1):
+            current.append(
+                min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (char_a != char_b))
+            )
+        if min(current) > limit:
+            return False
+        previous = current
+    return previous[-1] <= limit
+
+
+@lru_cache(maxsize=512)
+def _near_words(word):
+    """The word plus up to three words one or two letters away from it.
+
+    This is what lets "world" find "Word". Short words are left alone, because
+    expanding them turns "god" into "good" and fills the results with noise.
+    """
+    if len(word) < 5:
+        return (word,)
+    limit = 1 if len(word) < 8 else 2
+    found = []
+    for candidate in _search_vocabulary():
+        if candidate == word or abs(len(candidate) - len(word)) > limit:
+            continue
+        if _within_distance(word, candidate, limit):
+            found.append((abs(len(candidate) - len(word)), candidate))
+    found.sort()
+    return tuple([word] + [candidate for _, candidate in found[:3]])
+
+
+def _leading_words_in_common(query, verse):
+    """How many opening words the query and the verse share.
+
+    A reader who half-remembers a line usually remembers how it starts, so
+    "in the beginning was the ..." should beat a verse that merely contains the
+    same scattered words.
+    """
+    left = _tokens(query)
+    right = _tokens(verse)
+    shared = 0
+    while shared < len(left) and shared < len(right) and left[shared] == right[shared]:
+        shared += 1
+    return shared
+
+
+def query_words(term):
+    """The significant words of a query, lowercased and de-duplicated."""
+    cleaned = "".join(ch.lower() if (ch.isalnum() or ch == "'") else " " for ch in term)
+    words = []
+    for raw in cleaned.split():
+        raw = raw.strip("'")
+        if len(raw) < 2 or raw in STOPWORDS:
+            continue
+        if raw not in words:
+            words.append(raw)
+    return words
+
+
+def search_bible_approximate(term, limit=SEARCH_RESULT_LIMIT):
+    """Closest verses when the exact phrase is absent.
+
+    Each verse is scored on the significant words it contains, weighted so a
+    rare word counts for more than a common one, plus a bonus for sharing the
+    query's opening words. Near-spellings count too, so a query that says
+    "world" where the verse says "Word" still lands on John 1:1.
+    """
+    words = query_words(term)
+    if not words:
+        return 0, [], []
+
+    variants = {word: _near_words(word) for word in words}
+    needed = max(1, math.ceil(len(words) * APPROX_MATCH_RATIO))
+    entries = _load_search_index()
+
+    candidates = []
+    frequency = dict.fromkeys(words, 0)
+    for entry in entries:
+        lowered = entry[5]
+        matched = [word for word in words if any(variant in lowered for variant in variants[word])]
+        if len(matched) >= needed:
+            candidates.append((entry, matched))
+            for word in matched:
+                frequency[word] += 1
+
+    if not candidates:
+        return 0, [], words
+
+    total_verses = len(entries)
+
+    def score(entry, matched):
+        rarity = sum(math.log(1 + total_verses / max(frequency[word], 1)) for word in matched)
+        return rarity + 50 * _leading_words_in_common(term, entry[4])
+
+    candidates.sort(key=lambda pair: (-score(pair[0], pair[1]), len(pair[0][4])))
+
+    results = []
+    for entry, matched in candidates[:limit]:
+        reference, book, chapter, verse, text, _ = entry
+        results.append(
+            {
+                "reference": reference,
+                "book": book,
+                "chapter": chapter,
+                "verse": verse,
+                "text": text,
+                "matched": matched,
+            }
+        )
+    return len(candidates), results, words
+
+
 @app.get("/api/search")
 def api_search():
     """Search the whole Bible for a word or phrase.
@@ -323,11 +479,22 @@ def api_search():
         return jsonify({"error": "That search term is too long."}), 400
 
     total, results = search_bible(query)
+    approximate = False
+    matched_words = []
+    if total == 0:
+        # Nothing contains the phrase exactly. Offer the closest verses instead
+        # of stopping at "no verse contains this", so a half-remembered line
+        # still finds its passage.
+        total, results, matched_words = search_bible_approximate(query)
+        approximate = total > 0
+
     response = jsonify(
         {
             "query": query,
             "translation": "kjv",
             "total": total,
+            "approximate": approximate,
+            "matched_words": matched_words,
             "shown": len(results),
             "results": results,
         }

@@ -86,17 +86,26 @@ async function fetchPassage(reference) {
   return data;
 }
 function appendHighlighted(parent, text, needle) {
-  if (!needle) { parent.append(document.createTextNode(text)); return; }
-  let cursor = 0, index = text.toLowerCase().indexOf(needle);
-  while (index !== -1) {
-    parent.append(document.createTextNode(text.slice(cursor, index)));
+  const needles = (Array.isArray(needle) ? needle : [needle]).filter(Boolean);
+  if (!needles.length) { parent.append(document.createTextNode(text)); return; }
+  const lowered = text.toLowerCase();
+  let cursor = 0;
+  while (cursor < text.length) {
+    let best = -1, bestLength = 0;
+    needles.forEach(word => {
+      const at = lowered.indexOf(word.toLowerCase(), cursor);
+      if (at === -1) return;
+      if (best === -1 || at < best || (at === best && word.length > bestLength)) {
+        best = at; bestLength = word.length;
+      }
+    });
+    if (best === -1) { parent.append(document.createTextNode(text.slice(cursor))); break; }
+    if (best > cursor) parent.append(document.createTextNode(text.slice(cursor, best)));
     const mark = document.createElement("mark");
-    mark.textContent = text.slice(index, index + needle.length);
+    mark.textContent = text.slice(best, best + bestLength);
     parent.append(mark);
-    cursor = index + needle.length;
-    index = text.toLowerCase().indexOf(needle, cursor);
+    cursor = best + bestLength;
   }
-  parent.append(document.createTextNode(text.slice(cursor)));
 }
 function renderVerses(verses, term) {
   ui.verses.replaceChildren();
@@ -188,7 +197,7 @@ function renderSearchResults(data, term) {
     ui.verses.append(message);
     return;
   }
-  const needle = term.toLowerCase();
+  const needles = data.approximate ? (data.matched_words || []) : [term.toLowerCase()];
   data.results.forEach(result => {
     const item = document.createElement("p");
     item.className = "verse search-result";
@@ -201,7 +210,7 @@ function renderSearchResults(data, term) {
       searchReference(result.reference);
     });
     item.append(link, document.createTextNode(" "));
-    appendHighlighted(item, result.text, needle);
+    appendHighlighted(item, result.text, needles);
     ui.verses.append(item);
   });
 }
@@ -221,7 +230,12 @@ async function searchKeyword(term) {
     renderSearchResults(data, needle);
     const noun = data.total === 1 ? "verse" : "verses";
     const more = data.shown < data.total ? " Showing the first " + data.shown + "." : "";
-    setStatus(data.total + " " + noun + " in the Bible contain “" + needle + "”." + more + " Results use the King James Version.");
+    if (data.approximate) {
+      const words = (data.matched_words || []).join(", ");
+      setStatus("No verse contains “" + needle + "” exactly. Closest verses, matched on " + words + "." + more + " Results use the King James Version.");
+    } else {
+      setStatus(data.total + " " + noun + " in the Bible contain “" + needle + "”." + more + " Results use the King James Version.");
+    }
   } catch (error) {
     setStatus(error.message + " Check your connection and try again.", true);
   } finally {

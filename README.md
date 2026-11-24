@@ -114,6 +114,11 @@ curl "http://localhost:5000/api/search?q=shepherd"
 
 `total` counts every match; `shown` is capped at 200.
 
+When nothing contains the phrase exactly, the endpoint falls back to the
+closest verses and sets `approximate: true`, with `matched_words` naming what it
+matched on. Near-spellings count, so "in the beginning was the world" still
+reaches John 1:1, and verses sharing the query's opening words rank first.
+
 The page sends input to this endpoint unless it parses as a reference with a
 chapter number, such as `Mark 1` or `John 3:16`. A bare book name like `Mark`
 searches for the word instead. If a reference lookup comes back not found, the

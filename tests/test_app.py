@@ -386,3 +386,33 @@ def test_upstream_bad_reference_is_treated_as_not_found(client, monkeypatch):
 
     assert response.status_code == 404
     assert "could not find" in response.get_json()["error"].lower()
+
+
+def test_phrase_with_one_wrong_word_still_finds_the_verse(client):
+    """A reader who says "world" where the verse says "Word" reaches John 1:1."""
+    response = client.get(
+        "/api/search",
+        query_string={"q": "in the beginning was the world and the world was with God"},
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["approximate"] is True
+    assert data["results"][0]["reference"] == "John 1:1"
+    assert "beginning" in data["matched_words"]
+
+
+def test_exact_phrase_is_not_labelled_approximate(client):
+    response = client.get("/api/search", query_string={"q": "in the beginning was the Word"})
+
+    data = response.get_json()
+    assert data["approximate"] is False
+    assert "John 1:1" in [result["reference"] for result in data["results"]]
+
+
+def test_query_of_only_common_words_finds_nothing(client):
+    response = client.get("/api/search", query_string={"q": "in the and of"})
+
+    data = response.get_json()
+    assert data["total"] == 0
+    assert data["approximate"] is False
