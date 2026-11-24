@@ -153,6 +153,16 @@ async function loadChapter(book, chapter) {
   }
 }
 async function searchReference(reference) {
+  // A chapter beyond the end of the book is not something to search for, and an
+  // empty result set would look broken. Say how many chapters exist instead.
+  const parsed = parseReference(reference);
+  if (parsed) {
+    const book = findBook(parsed.book);
+    if (book && parsed.chapter > book.chapters) {
+      setStatus(book.name + " has " + book.chapters + " chapters, so chapter " + parsed.chapter + " does not exist.", true);
+      return;
+    }
+  }
   setBusy(true);
   setStatus("Looking up " + reference + "…");
   ui.verses.replaceChildren();
