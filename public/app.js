@@ -157,6 +157,7 @@ async function searchReference(reference) {
   setStatus("Looking up " + reference + "…");
   ui.verses.replaceChildren();
   let searchInstead = false;
+  let searchNote = "";
   try {
     const data = await fetchPassage(reference);
     const book = findBook(data.verses[0].book_name || "");
@@ -175,18 +176,17 @@ async function searchReference(reference) {
     ui.input.value = reference;
     setStatus("");
   } catch (error) {
-    // A reference that does not exist should still give the reader something:
-    // fall back to searching the words they typed.
-    if (error.status === 400 || error.status === 404) {
-      searchInstead = true;
-    } else {
-      setStatus(error.message + " You can also choose a book and chapter from the browse panel.", true);
+    // Never dead-end. Whatever went wrong, search what the reader typed, so the
+    // page always answers with verses instead of an error they cannot act on.
+    searchInstead = true;
+    if (error.status !== 400 && error.status !== 404) {
+      searchNote = error.message + " Showing search results instead.";
     }
   } finally {
     setBusy(false);
     updateLabels();
   }
-  if (searchInstead) await searchKeyword(reference);
+  if (searchInstead) await searchKeyword(reference, searchNote);
 }
 function renderSearchResults(data, term) {
   ui.verses.replaceChildren();
@@ -214,7 +214,7 @@ function renderSearchResults(data, term) {
     ui.verses.append(item);
   });
 }
-async function searchKeyword(term) {
+async function searchKeyword(term, note) {
   const needle = term.trim();
   if (!needle) { setStatus("Enter a passage reference or keyword.", true); return; }
   displayMode = "keyword";
@@ -230,11 +230,12 @@ async function searchKeyword(term) {
     renderSearchResults(data, needle);
     const noun = data.total === 1 ? "verse" : "verses";
     const more = data.shown < data.total ? " Showing the first " + data.shown + "." : "";
+    const lead = note ? note + " " : "";
     if (data.approximate) {
       const words = (data.matched_words || []).join(", ");
-      setStatus("No verse contains “" + needle + "” exactly. Closest verses, matched on " + words + "." + more + " Results use the King James Version.");
+      setStatus(lead + "No verse contains “" + needle + "” exactly. Closest verses, matched on " + words + "." + more + " Results use the King James Version.");
     } else {
-      setStatus(data.total + " " + noun + " in the Bible contain “" + needle + "”." + more + " Results use the King James Version.");
+      setStatus(lead + data.total + " " + noun + " in the Bible contain “" + needle + "”." + more + " Results use the King James Version.");
     }
   } catch (error) {
     setStatus(error.message + " Check your connection and try again.", true);
