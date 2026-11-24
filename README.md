@@ -7,6 +7,8 @@ English Bible.
 Passage text comes from [bible-api.com](https://bible-api.com/). Both translations
 are public domain.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/dejohn03/Bible-Project)
+
 ## How it works
 
 The browser never talks to the Bible service directly. Flask sits in the middle:
@@ -28,10 +30,11 @@ turns an upstream failure into a message a reader can actually understand.
 | `app.py` | Flask app: routes, passage cache, upstream fetch and retries |
 | `templates/index.html` | The reader page |
 | `templates/404.html`, `templates/500.html` | Error pages |
-| `static/app.js` | Book list, navigation, search, verse rendering |
-| `static/styles.css` | All styling (dark theme) |
-| `static/favicon.svg` | Site icon |
+| `public/app.js` | Book list, navigation, search, verse rendering |
+| `public/styles.css` | All styling (dark theme) |
+| `public/favicon.svg` | Site icon |
 | `tests/test_app.py` | Test suite |
+| `vercel.json` | Vercel function config: timeout and bundle exclusions |
 | `render.yaml` | Render deployment blueprint |
 
 ## Running locally
@@ -94,13 +97,31 @@ Returns `{"status": "ok"}`. Used by the hosting health check.
 
 Bible text does not change, so a successful passage is cached in memory for six
 hours, with the 512 most recently used passages kept. Gunicorn runs multiple
-worker processes, so each worker keeps its own cache. That is fine here: a warm
+worker processes and Vercel runs one function per instance, so each keeps its
+own cache. That is fine here: a warm
 cache is a speed bonus, not a correctness requirement. Move to Redis if you ever
 need the cache shared across workers or instances.
 
-## Deploying to Render
+## Deploying
 
-`render.yaml` describes the service. Push to `main` and Render redeploys:
+### Vercel
+
+Vercel detects the Flask app in `app.py` and runs it as a single function.
+`vercel.json` raises the function timeout to 60 seconds, so a slow upstream
+surfaces as our own `503` instead of a platform `504`.
+
+Two things to know:
+
+- Static assets must live in `public/`. Vercel serves that directory from its
+  CDN and does not use Flask's static folder. `app.py` points `static_folder` at
+  `public` with an empty `static_url_path`, so `url_for("static", ...)` still
+  produces `/styles.css` locally and in production.
+- The passage cache is per function instance, so it is not shared between
+  instances. It still saves upstream calls on warm instances.
+
+### Render
+
+`render.yaml` describes a Render service. Push to `main` and Render redeploys:
 
 ```bash
 gunicorn app:app --workers 2 --threads 4 --timeout 30

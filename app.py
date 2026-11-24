@@ -26,7 +26,11 @@ from urllib.request import Request, urlopen
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-app = Flask(__name__)
+# Assets live in public/ because Vercel serves that directory from its CDN and
+# explicitly does not support Flask's default static folder. An empty
+# static_url_path keeps url_for("static", ...) emitting /styles.css, which is
+# the same URL locally and on Vercel.
+app = Flask(__name__, static_folder="public", static_url_path="")
 
 BIBLE_API_BASE = "https://bible-api.com"
 SUPPORTED_TRANSLATIONS = {"kjv", "web"}
