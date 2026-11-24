@@ -416,3 +416,80 @@ def test_query_of_only_common_words_finds_nothing(client):
     data = response.get_json()
     assert data["total"] == 0
     assert data["approximate"] is False
+
+
+# --- Names and unfamiliar words -------------------------------------------------
+
+
+def test_define_explains_a_name(client):
+    response = client.get("/api/define", query_string={"term": "Immanuel"})
+
+    data = response.get_json()
+    assert response.status_code == 200
+    assert data["found"] is True
+    assert data["matched_term"] == "Immanuel"
+    assert "God with us" in data["meanings"][0]["text"]
+    assert data["meanings"][0]["source"] == "Hitchcock's Bible Names"
+
+
+def test_define_is_case_insensitive(client):
+    response = client.get("/api/define", query_string={"term": "immanuel"})
+
+    assert response.get_json()["found"] is True
+
+
+def test_define_matches_the_start_of_a_longer_name(client):
+    response = client.get("/api/define", query_string={"term": "Imman"})
+
+    data = response.get_json()
+    assert data["found"] is True
+    assert data["matched_term"] == "Immanuel"
+
+
+def test_define_points_to_verses_that_use_the_word(client):
+    response = client.get("/api/define", query_string={"term": "propitiation"})
+
+    data = response.get_json()
+    assert data["found"] is True
+    references = [result["reference"] for result in data["references"]]
+    assert "Romans 3:25" in references
+
+
+def test_define_matches_whole_words_only(client):
+    """A substring match would send "selah" to Methuselah in Genesis."""
+
+    response = client.get("/api/define", query_string={"term": "selah"})
+
+    data = response.get_json()
+    assert data["found"] is True
+    references = [result["reference"] for result in data["references"]]
+    assert references
+    assert all("Methuselah" not in result["text"] for result in data["references"])
+
+
+def test_define_reports_an_unknown_word_without_erroring(client):
+    response = client.get("/api/define", query_string={"term": "zzzqqq"})
+
+    data = response.get_json()
+    assert response.status_code == 200
+    assert data["found"] is False
+    assert data["meanings"] == []
+
+
+def test_define_rejects_a_too_short_term(client):
+    response = client.get("/api/define", query_string={"term": "a"})
+
+    assert response.status_code == 400
+
+
+def test_define_rejects_an_overlong_term(client):
+    response = client.get("/api/define", query_string={"term": "a" * 61})
+
+    assert response.status_code == 400
+
+
+def test_dictionary_ships_with_the_app():
+    terms = app_module._load_dictionary()
+
+    assert len(terms) > 4000
+    assert "immanuel" in terms

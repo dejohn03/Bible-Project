@@ -10,7 +10,12 @@ const ui = {
   title: el("passage-title"), testamentLabel: el("testament-label"), translationLabel: el("translation-label"),
   status: el("status-message"), verses: el("verse-list"), previous: el("previous-chapter"),
   next: el("next-chapter"), position: el("chapter-position"), fullChapter: el("full-chapter-button"),
-  verse: el("verse-select"), panel: document.querySelector(".reading-panel")
+  verse: el("verse-select"), panel: document.querySelector(".reading-panel"),
+  meaning: el("meaning-card"), listen: el("listen-button"), listenRate: el("listen-rate"),
+  notesToggle: el("notes-toggle"), notepad: el("notepad"), notepadText: el("notepad-text"),
+  notepadClose: el("notepad-close"), notepadCount: el("notepad-count"),
+  notepadDownload: el("notepad-download"), notepadClear: el("notepad-clear"),
+  notepadDate: el("notepad-date")
 };
 let currentBook = BOOKS[0], currentChapter = 1, currentVerses = [], displayMode = "chapter";
 
@@ -144,6 +149,8 @@ async function loadChapter(book, chapter) {
   populateChapters(currentChapter);
   displayMode = "chapter";
   ui.fullChapter.hidden = true;
+  stopSpeech();
+  hideMeaning();
   updateTitle();
   updateLabels();
   setBusy(true);
@@ -167,6 +174,8 @@ async function loadChapter(book, chapter) {
 async function loadVerse(number) {
   // Choosing a verse should show that verse, not leave the whole chapter up.
   displayMode = "verse";
+  stopSpeech();
+  hideMeaning();
   const label = currentBook.name + " " + currentChapter + ":" + number;
   updateTitle(label);
   updateLabels();
@@ -196,6 +205,8 @@ async function searchReference(reference) {
       return;
     }
   }
+  stopSpeech();
+  hideMeaning();
   setBusy(true);
   setStatus("Looking up " + reference + "…");
   ui.verses.replaceChildren();
@@ -263,6 +274,8 @@ async function searchKeyword(term, note) {
   if (!needle) { setStatus("Enter a passage reference or keyword.", true); return; }
   displayMode = "keyword";
   ui.fullChapter.hidden = true;
+  stopSpeech();
+  hideMeaning();
   updateTitle("Search: “" + needle + "”");
   ui.verses.replaceChildren();
   setBusy(true);
@@ -272,6 +285,7 @@ async function searchKeyword(term, note) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not search just now.");
     renderSearchResults(data, needle);
+    showMeaning(needle);
     const noun = data.total === 1 ? "verse" : "verses";
     const more = data.shown < data.total ? " Showing the first " + data.shown + "." : "";
     const lead = note ? note + " " : "";
@@ -322,4 +336,265 @@ document.querySelectorAll(".quick-link").forEach(button => button.addEventListen
 ui.previous.addEventListener("click", () => { if (currentChapter > 1) loadChapter(currentBook,currentChapter - 1); });
 ui.next.addEventListener("click", () => { if (currentChapter < currentBook.chapters) loadChapter(currentBook,currentChapter + 1); });
 ui.fullChapter.addEventListener("click", () => loadChapter(currentBook,currentChapter));
+
+/* ---------------- The meaning of a name or an unfamiliar word ---------------- */
+
+function hideMeaning() {
+  if (!ui.meaning) return;
+  ui.meaning.hidden = true;
+  ui.meaning.replaceChildren();
+}
+
+function renderMeaning(data) {
+  const card = ui.meaning;
+  card.replaceChildren();
+
+  const topline = document.createElement("div");
+  topline.className = "meaning-topline";
+  const kind = document.createElement("span");
+  kind.className = "meaning-kind";
+  kind.textContent = "Meaning";
+  const term = document.createElement("h3");
+  term.className = "meaning-term";
+  term.textContent = data.matched_term || data.term;
+  topline.append(kind, term);
+  card.append(topline);
+
+  const body = document.createElement("div");
+  body.className = "meaning-body";
+  (data.meanings || []).forEach(meaning => {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = meaning.text;
+    const source = document.createElement("span");
+    source.className = "meaning-source";
+    source.textContent = meaning.source;
+    paragraph.append(source);
+    body.append(paragraph);
+  });
+  card.append(body);
+
+  if (data.references && data.references.length) {
+    const refs = document.createElement("div");
+    refs.className = "meaning-refs";
+    data.references.forEach(result => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "meaning-ref";
+      button.textContent = result.reference;
+      button.addEventListener("click", () => {
+        ui.input.value = result.reference;
+        searchReference(result.reference);
+      });
+      refs.append(button);
+    });
+    card.append(refs);
+  }
+
+  const note = document.createElement("p");
+  note.className = "meaning-note";
+  const count = data.total || 0;
+  note.textContent = count
+    ? count + (count === 1 ? " verse" : " verses") + " in the King James Bible use this word."
+    : "This word does not appear in the King James text itself.";
+  card.append(note);
+
+  card.hidden = false;
+}
+
+async function showMeaning(term) {
+  if (!ui.meaning) return;
+  const needle = (term || "").trim();
+  if (needle.length < 2) { hideMeaning(); return; }
+  try {
+    const response = await fetch("/api/define?term=" + encodeURIComponent(needle));
+    if (!response.ok) { hideMeaning(); return; }
+    const data = await response.json();
+    if (!data.found) { hideMeaning(); return; }
+    renderMeaning(data);
+  } catch (error) {
+    hideMeaning();
+  }
+}
+
+/* ---------------- Listen: the app reads the passage aloud ---------------- */
+
+const speech = {
+  synth: "speechSynthesis" in window ? window.speechSynthesis : null,
+  state: "idle",
+  index: 0,
+  rate: 1
+};
+let speechGeneration = 0;
+
+function clearSpeakingHighlight() {
+  document.querySelectorAll(".verse-speaking").forEach(node => node.classList.remove("verse-speaking"));
+}
+
+function updateListenButton() {
+  if (!ui.listen) return;
+  if (!speech.synth) {
+    // No voice available: hide the control rather than offer a dead button.
+    ui.listen.hidden = true;
+    if (ui.listenRate) ui.listenRate.hidden = true;
+    return;
+  }
+  const labels = { idle: "Listen ▸", speaking: "Pause ❙❙", paused: "Resume ▸" };
+  ui.listen.textContent = labels[speech.state] || labels.idle;
+  ui.listen.setAttribute("aria-pressed", speech.state === "speaking" ? "true" : "false");
+}
+
+function stopSpeech() {
+  speechGeneration += 1;
+  if (speech.synth) speech.synth.cancel();
+  speech.state = "idle";
+  speech.index = 0;
+  clearSpeakingHighlight();
+  updateListenButton();
+}
+
+function speakVerse(index) {
+  if (!speech.synth) return;
+  const verses = currentVerses;
+  if (!verses.length || index >= verses.length) { stopSpeech(); return; }
+  const verse = verses[index];
+  const generation = speechGeneration;
+  speech.index = index;
+
+  clearSpeakingHighlight();
+  const node = document.getElementById("verse-" + verse.verse);
+  if (node) {
+    node.classList.add("verse-speaking");
+    node.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  const utterance = new SpeechSynthesisUtterance(verse.verse + ". " + verse.text.trim());
+  utterance.rate = speech.rate;
+  utterance.lang = "en-US";
+  utterance.onend = () => {
+    if (generation !== speechGeneration) return;
+    if (speech.state === "speaking") speakVerse(index + 1);
+  };
+  utterance.onerror = () => {
+    if (generation !== speechGeneration) return;
+    if (speech.state === "speaking") stopSpeech();
+  };
+  speech.synth.speak(utterance);
+}
+
+function restartSpeechFrom(index) {
+  speechGeneration += 1;
+  if (speech.synth) speech.synth.cancel();
+  speech.state = "speaking";
+  speakVerse(index);
+}
+
+function toggleSpeech() {
+  if (!speech.synth) {
+    setStatus("This browser cannot read aloud. Try Chrome, Edge, or Safari.", true);
+    return;
+  }
+  if (speech.state === "speaking") {
+    speech.synth.pause();
+    speech.state = "paused";
+  } else if (speech.state === "paused") {
+    speech.synth.resume();
+    speech.state = "speaking";
+  } else {
+    if (!currentVerses.length) { setStatus("Open a passage first, then press Listen.", true); return; }
+    speechGeneration += 1;
+    speech.state = "speaking";
+    speakVerse(0);
+  }
+  updateListenButton();
+}
+
+/* ---------------- Notepad ---------------- */
+
+const NOTES_KEY = "stillword.notes.v1";
+let notesTimer = null;
+
+function updateNotesCount() {
+  if (!ui.notepadCount || !ui.notepadText) return;
+  const trimmed = ui.notepadText.value.trim();
+  const count = trimmed ? trimmed.split(/\s+/).length : 0;
+  ui.notepadCount.textContent = count + (count === 1 ? " word" : " words");
+}
+
+function saveNotes() {
+  if (!ui.notepadText) return;
+  try {
+    window.localStorage.setItem(NOTES_KEY, ui.notepadText.value);
+  } catch (error) {
+    // Private browsing can refuse storage; the notes still work for this visit.
+  }
+}
+
+function loadNotes() {
+  if (!ui.notepadText) return;
+  try {
+    const stored = window.localStorage.getItem(NOTES_KEY);
+    if (stored) ui.notepadText.value = stored;
+  } catch (error) {
+    // Nothing saved yet, or storage is unavailable.
+  }
+  updateNotesCount();
+}
+
+function setNotesOpen(open) {
+  if (!ui.notepad) return;
+  ui.notepad.classList.toggle("open", open);
+  ui.notepad.setAttribute("aria-hidden", open ? "false" : "true");
+  if (ui.notesToggle) ui.notesToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  if (!open) return;
+  if (ui.notepadDate) {
+    ui.notepadDate.textContent = new Date().toLocaleDateString(undefined, {
+      weekday: "long", day: "numeric", month: "long"
+    });
+  }
+  loadNotes();
+  window.setTimeout(() => { if (ui.notepadText) ui.notepadText.focus(); }, 320);
+}
+
+function downloadNotes() {
+  if (!ui.notepadText) return;
+  const blob = new Blob([ui.notepadText.value || ""], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "stillword-notes-" + new Date().toISOString().slice(0, 10) + ".txt";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+if (ui.listen) ui.listen.addEventListener("click", toggleSpeech);
+if (ui.listenRate) ui.listenRate.addEventListener("change", () => {
+  speech.rate = Number(ui.listenRate.value) || 1;
+  if (speech.state === "speaking" || speech.state === "paused") restartSpeechFrom(speech.index);
+});
+if (ui.notesToggle) ui.notesToggle.addEventListener("click", () => {
+  setNotesOpen(!ui.notepad.classList.contains("open"));
+});
+if (ui.notepadClose) ui.notepadClose.addEventListener("click", () => setNotesOpen(false));
+if (ui.notepadText) ui.notepadText.addEventListener("input", () => {
+  updateNotesCount();
+  window.clearTimeout(notesTimer);
+  notesTimer = window.setTimeout(saveNotes, 400);
+});
+if (ui.notepadDownload) ui.notepadDownload.addEventListener("click", downloadNotes);
+if (ui.notepadClear) ui.notepadClear.addEventListener("click", () => {
+  const empty = !ui.notepadText.value.trim();
+  if (!empty && !window.confirm("Clear all your notes? This cannot be undone.")) return;
+  ui.notepadText.value = "";
+  updateNotesCount();
+  saveNotes();
+  ui.notepadText.focus();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && ui.notepad && ui.notepad.classList.contains("open")) setNotesOpen(false);
+});
+loadNotes();
+updateListenButton();
+
 populateBooks("Genesis"); populateChapters(1); loadChapter(currentBook,1);

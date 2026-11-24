@@ -15,9 +15,11 @@ Two things this module is deliberate about:
 
 from __future__ import annotations
 
+import gzip
 import json
 import math
 import os
+import re
 import threading
 import time
 from collections import OrderedDict
@@ -50,7 +52,9 @@ CACHE_CONTROL = "public, max-age=3600"
 SEARCH_MIN_LENGTH = 2
 SEARCH_MAX_LENGTH = 100
 SEARCH_RESULT_LIMIT = 200
+DICTIONARY_REFERENCE_LIMIT = 6
 SEARCH_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kjv.json")
+DICTIONARY_DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "dictionary.json.gz")
 
 # When an exact phrase finds nothing, verses are scored on how many of the
 # query's significant words they contain. Half the words is enough: a reader
@@ -326,6 +330,31 @@ def search_bible(term, limit=SEARCH_RESULT_LIMIT):
     return total, results
 
 
+def search_bible_word(term, limit=DICTIONARY_REFERENCE_LIMIT):
+    """Verses containing ``term`` as a whole word.
+
+    A plain substring search makes "selah" match "Methuselah" and would send a
+    reader looking up a word to a passage that never uses it.
+    """
+    pattern = re.compile(r"\b" + re.escape(term.lower()) + r"\b")
+    total = 0
+    results = []
+    for reference, book, chapter, verse, text, lowered in _load_search_index():
+        if pattern.search(lowered):
+            total += 1
+            if len(results) < limit:
+                results.append(
+                    {
+                        "reference": reference,
+                        "book": book,
+                        "chapter": chapter,
+                        "verse": verse,
+                        "text": text,
+                    }
+                )
+    return total, results
+
+
 def _tokens(text):
     """Lowercased words, punctuation stripped."""
     cleaned = "".join(ch.lower() if (ch.isalnum() or ch == "'") else " " for ch in text)
@@ -500,6 +529,99 @@ def api_search():
         }
     )
     response.headers["Cache-Control"] = "public, max-age=600"
+    return response
+
+
+_dictionary = None
+_dictionary_lock = threading.Lock()
+
+
+def _load_dictionary():
+    """Load the bundled name and word dictionary once per process.
+
+    Hitchcock's Bible Names gives the meaning of a name ("Immanuel" -> "God with
+    us"); Easton's covers unfamiliar words and places. Both are public domain and
+    ship with the app, so a lookup never depends on another service.
+    """
+    global _dictionary
+    if _dictionary is not None:
+        return _dictionary
+    with _dictionary_lock:
+        if _dictionary is not None:
+            return _dictionary
+        try:
+            with gzip.open(DICTIONARY_DATA_PATH, "rt", encoding="utf-8") as handle:
+                _dictionary = json.load(handle)["terms"]
+        except (OSError, ValueError, KeyError):
+            # A missing or damaged dictionary must not take the reader down with
+            # it: lookups simply report that nothing was found.
+            _dictionary = {}
+        return _dictionary
+
+
+def lookup_term(term):
+    """Find a dictionary entry, exact match first, then a looser one.
+
+    Readers type "immanuel" or "Immanuel", and often only the opening of a longer
+    name, so exact matching on its own would look broken.
+    """
+    terms = _load_dictionary()
+    key = " ".join(term.lower().split())
+    if not key:
+        return None, None
+    if key in terms:
+        return key, terms[key]
+    if len(key) < 3:
+        return None, None
+    for candidate, entry in terms.items():
+        if candidate.startswith(key):
+            return candidate, entry
+    for candidate, entry in terms.items():
+        if key in candidate:
+            return candidate, entry
+    return None, None
+
+
+@app.get("/api/define")
+def api_define():
+    """Explain a Bible name or an unfamiliar word, and show where it appears."""
+    term = request.args.get("term", "").strip()
+
+    if len(term) < 2:
+        return jsonify({"error": "Look up at least two characters."}), 400
+
+    if len(term) > 60:
+        return jsonify({"error": "That term is too long to look up."}), 400
+
+    _matched, entry = lookup_term(term)
+    if entry is None:
+        return jsonify(
+            {
+                "term": term,
+                "found": False,
+                "meanings": [],
+                "total": 0,
+                "references": [],
+            }
+        )
+
+    # Where the word actually appears. A name can be spelled differently from the
+    # dictionary headword, so fall back to the headword before giving up.
+    total, references = search_bible_word(term)
+    if total == 0 and entry["display"].lower() != term.lower():
+        total, references = search_bible_word(entry["display"])
+
+    response = jsonify(
+        {
+            "term": term,
+            "found": True,
+            "matched_term": entry["display"],
+            "meanings": entry["meanings"],
+            "total": total,
+            "references": references,
+        }
+    )
+    response.headers["Cache-Control"] = "public, max-age=3600"
     return response
 
 

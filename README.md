@@ -175,3 +175,23 @@ The bundled King James text in `data/kjv.json` is public domain in most
 jurisdictions. It remains subject to Crown copyright in the United Kingdom.
 
 MIT. See [LICENSE](LICENSE).
+
+## Names, words, notes and listening
+
+**Meaning of a name or word.** Searching a word also asks `GET /api/define?term=…`,
+which returns the meaning plus the verses that use it. "Immanuel" gives *God with
+us* with Isaiah 7:14 and 8:8; "selah" gives *the end; a pause* with the Psalms.
+Lookups match whole words, so "selah" never lands on Methuselah, and they fall
+back to a prefix match so "Imman" still finds Immanuel.
+
+**The dictionary.** `data/dictionary.json.gz` bundles Hitchcock's Bible Names
+(1869) and Easton's Bible Dictionary (1897), both public domain, 4,855 entries
+merged. It ships with the app, so a lookup never depends on another service.
+
+**Notepad.** A ruled-paper drawer that slides over the reading pane, for jotting
+while reading or during a sermon. Notes autosave to `localStorage` on the device,
+with a word count and "Save as text" export. Nothing is uploaded anywhere.
+
+**Listen.** The reading pane can read the passage aloud using the device's own
+voice, highlighting each verse as it is spoken, with pause and a speed control.
+It uses the browser's speech synthesis, so it costs nothing and needs no network.

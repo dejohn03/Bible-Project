@@ -967,3 +967,310 @@ select {
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* --- Reading aloud and the notepad, beside the passage title --- */
+.reading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.listen-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 2px 2px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #1d1d1d;
+}
+
+.listen-group .quiet-button {
+    border: 0;
+    padding: 6px 8px;
+    background: transparent;
+}
+
+.listen-rate-label {
+    font-size: 7px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.listen-rate {
+    padding: 4px 17px 4px 3px;
+    border: 0;
+    background-color: transparent;
+    background-position: right 3px center;
+    font-size: 10px;
+}
+
+.verse-speaking {
+    border-radius: 3px;
+    background: rgba(168, 197, 173, .13);
+    box-shadow: inset 2px 0 0 var(--green);
+    transition: background .3s ease;
+}
+
+/* --- Meaning of a name or an unfamiliar word --- */
+.meaning-card {
+    margin: 0 0 22px;
+    padding: 17px 20px 18px;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--gold);
+    border-radius: 8px;
+    background: #1a1a1a;
+}
+
+.meaning-card[hidden] {
+    display: none;
+}
+
+.meaning-topline {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-bottom: 11px;
+}
+
+.meaning-kind {
+    font-size: 7px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.meaning-term {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 400;
+    letter-spacing: -.4px;
+    color: var(--ink);
+}
+
+.meaning-body p {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #dcdcdc;
+}
+
+.meaning-body p:last-child {
+    margin-bottom: 0;
+}
+
+.meaning-source {
+    display: block;
+    margin-top: 4px;
+    font-size: 7px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.meaning-refs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.meaning-ref {
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #232323;
+    color: var(--green);
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.meaning-ref:hover {
+    border-color: var(--green-dark);
+}
+
+.meaning-note {
+    margin: 13px 0 0;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+/* --- The notepad: a sheet of ruled paper, not another dark panel --- */
+.notepad {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 70;
+    display: flex;
+    width: min(430px, 100vw);
+    height: 100dvh;
+    pointer-events: none;
+    transform: translateX(101%);
+    transition: transform .32s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: -18px 0 44px rgba(0, 0, 0, .5);
+}
+
+.notepad.open {
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.notepad-binding {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 26px;
+    padding: 30px 0;
+    background: #2b2b2b;
+    border-right: 1px solid #1a1a1a;
+}
+
+.notepad-binding i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #a3a3a3, #454545 72%);
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, .65);
+}
+
+.notepad-sheet {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    padding: 24px 22px 16px;
+    background-color: #f7f2e4;
+    background-image: linear-gradient(90deg, transparent 0 51px, #e2b9ad 51px 52px, transparent 52px);
+    color: #2b2620;
+}
+
+.notepad-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 0 12px 62px;
+}
+
+.notepad-date {
+    margin: 0 0 5px;
+    font-size: 7px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #8d8271;
+}
+
+.notepad-head h2 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: -.4px;
+    color: #2b2620;
+}
+
+.notepad-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #d9d0bb;
+    border-radius: 50%;
+    background: #efe8d7;
+    color: #6d6353;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notepad-text {
+    flex: 1;
+    width: 100%;
+    padding: 3px 8px 44px 62px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background-color: transparent;
+    background-image: repeating-linear-gradient(transparent 0 31px, #ded6c3 31px 32px);
+    background-attachment: local;
+    font-family: var(--serif);
+    font-size: 14.5px;
+    line-height: 32px;
+    color: #2b2620;
+}
+
+.notepad-text::placeholder {
+    color: #a99e8a;
+}
+
+.notepad-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 11px 0 0 62px;
+    border-top: 1px solid #ded6c3;
+}
+
+.notepad-count {
+    font-size: 10px;
+    color: #8d8271;
+}
+
+.notepad-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.notepad-action {
+    padding: 6px 9px;
+    border: 1px solid #d9d0bb;
+    border-radius: 4px;
+    background: #efe8d7;
+    color: #4a4335;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.notepad-action.danger {
+    color: #8b3c32;
+}
+
+@media (max-width: 760px) {
+    .notepad {
+        width: 100vw;
+    }
+
+    .notepad-binding {
+        width: 20px;
+    }
+
+    .notepad-sheet {
+        padding: 18px 14px 14px;
+    }
+
+    .notepad-head,
+    .notepad-foot {
+        padding-left: 50px;
+    }
+
+    .notepad-text {
+        padding-left: 50px;
+        font-size: 14px;
+    }
+
+    .chapter-heading {
+        flex-wrap: wrap;
+    }
+
+    .reading-actions {
+        justify-content: flex-start;
+    }
+}

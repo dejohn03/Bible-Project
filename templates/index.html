@@ -81,9 +81,23 @@
           <div class="reading-topline"><span id="testament-label" class="testament-pill">OLD TESTAMENT</span><span id="translation-label" class="reading-translation">KING JAMES VERSION</span></div>
           <div class="chapter-heading">
             <div><p class="chapter-overline">READING</p><h2 id="passage-title">Genesis <span>1</span></h2></div>
-            <button id="full-chapter-button" class="quiet-button" type="button" hidden>Read full chapter ↗</button>
+            <div class="reading-actions">
+              <div class="listen-group">
+                <button id="listen-button" class="quiet-button" type="button" aria-pressed="false">Listen ▸</button>
+                <label class="listen-rate-label" for="listen-rate">Speed</label>
+                <select id="listen-rate" class="listen-rate">
+                  <option value="0.85">0.85×</option>
+                  <option value="1" selected>1×</option>
+                  <option value="1.15">1.15×</option>
+                  <option value="1.3">1.3×</option>
+                </select>
+              </div>
+              <button id="notes-toggle" class="quiet-button" type="button" aria-expanded="false" aria-controls="notepad">Notes</button>
+              <button id="full-chapter-button" class="quiet-button" type="button" hidden>Read full chapter ↗</button>
+            </div>
           </div>
           <div id="status-message" class="status-message" role="status">Preparing your reading…</div>
+          <div id="meaning-card" class="meaning-card" hidden></div>
           <div id="verse-list" class="verse-list"></div>
           <nav class="chapter-navigation" aria-label="Chapter navigation">
             <button id="previous-chapter" class="chapter-nav-button" type="button"><span aria-hidden="true">←</span><span><small>PREVIOUS</small><strong>Chapter</strong></span></button>
@@ -94,6 +108,27 @@
         </article>
       </div>
     </section>
+
+    <aside id="notepad" class="notepad" aria-label="Notes" aria-hidden="true">
+      <div class="notepad-binding" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="notepad-sheet">
+        <header class="notepad-head">
+          <div>
+            <p class="notepad-date" id="notepad-date"></p>
+            <h2>Notes</h2>
+          </div>
+          <button id="notepad-close" class="notepad-close" type="button" aria-label="Close notes">×</button>
+        </header>
+        <textarea id="notepad-text" class="notepad-text" placeholder="Jot a thought, a verse that struck you, or a line from the sermon…" spellcheck="true"></textarea>
+        <footer class="notepad-foot">
+          <span id="notepad-count" class="notepad-count">0 words</span>
+          <div class="notepad-buttons">
+            <button id="notepad-download" class="notepad-action" type="button">Save as text</button>
+            <button id="notepad-clear" class="notepad-action danger" type="button">Clear</button>
+          </div>
+        </footer>
+      </div>
+    </aside>
 
     <section class="closing-note"><span class="closing-symbol" aria-hidden="true">✳</span><p>“Thy word is a lamp unto my feet, and a light unto my path.”</p><span>PSALM 119:105 · KJV</span></section>
   </main>
