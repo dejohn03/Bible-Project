@@ -89,6 +89,7 @@ function updateTitle(title) {
   ui.title.replaceChildren(document.createTextNode(title || (currentBook.name + " " + currentChapter)));
 }
 async function fetchPassage(reference) {
+  if (window.StaticApi) return window.StaticApi.passage(reference, ui.translation.value);
   const query = new URLSearchParams({reference, translation:ui.translation.value});
   const response = await fetch("/api/passage?" + query.toString());
   const data = await response.json();
@@ -281,9 +282,14 @@ async function searchKeyword(term, note) {
   setBusy(true);
   setStatus("Searching the Bible for “" + needle + "”…");
   try {
-    const response = await fetch("/api/search?q=" + encodeURIComponent(needle));
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not search just now.");
+    let data;
+    if (window.StaticApi) {
+      data = await window.StaticApi.search(needle);
+    } else {
+      const response = await fetch("/api/search?q=" + encodeURIComponent(needle));
+      data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not search just now.");
+    }
     renderSearchResults(data, needle);
     showMeaning(needle);
     const noun = data.total === 1 ? "verse" : "verses";
@@ -406,9 +412,14 @@ async function showMeaning(term) {
   const needle = (term || "").trim();
   if (needle.length < 2) { hideMeaning(); return; }
   try {
-    const response = await fetch("/api/define?term=" + encodeURIComponent(needle));
-    if (!response.ok) { hideMeaning(); return; }
-    const data = await response.json();
+    let data;
+    if (window.StaticApi) {
+      data = await window.StaticApi.define(needle);
+    } else {
+      const response = await fetch("/api/define?term=" + encodeURIComponent(needle));
+      if (!response.ok) { hideMeaning(); return; }
+      data = await response.json();
+    }
     if (!data.found) { hideMeaning(); return; }
     renderMeaning(data);
   } catch (error) {

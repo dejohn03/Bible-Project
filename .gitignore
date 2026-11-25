@@ -11,3 +11,6 @@ htmlcov/
 *.log
 .vercel
 uv.lock
+
+# Static build output
+_site/
