@@ -386,18 +386,27 @@ select {
     grid-column: 1 / -1;
 }
 
+/* A green wash, not a grey tile: the three boxes are one navigation control and
+   should read as a group against the sidebar rather than blend into it. */
 .picker-field {
     min-width: 0;
     padding: 8px 9px 9px;
-    border: 1px solid var(--line);
+    border: 1px solid #35493c;
     border-radius: 8px;
-    background: #202020;
+    background: var(--green-pale);
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.picker-field:focus-within {
+    border-color: var(--green-dark);
+    background: #2c3f33;
 }
 
 .picker-field .field-label {
     margin: 0 0 5px;
     font-size: 7px;
     letter-spacing: .11em;
+    color: var(--green);
 }
 
 .picker-field select {
