@@ -391,15 +391,15 @@ select {
 .picker-field {
     min-width: 0;
     padding: 8px 9px 9px;
-    border: 1px solid #2e2e2e;
+    border: 1px solid var(--line);
     border-radius: 8px;
-    background: var(--paper);
+    background: #222222;
     transition: border-color .18s ease, background .18s ease;
 }
 
 .picker-field:focus-within {
     border-color: var(--green-dark);
-    background: #171717;
+    background: #2a2a2a;
 }
 
 .picker-field .field-label {
@@ -1352,9 +1352,9 @@ select {
     padding: 5px;
     overflow-y: auto;
     list-style: none;
-    border: 1px solid #2e2e2e;
+    border: 1px solid var(--line);
     border-radius: 8px;
-    background: var(--paper);
+    background: #222222;
     box-shadow: 0 16px 34px rgba(0, 0, 0, .55);
 }
 
@@ -1370,11 +1370,11 @@ select {
 }
 
 .picker-option:hover {
-    background: #1f1f1f;
+    background: #2e2e2e;
     color: var(--green);
 }
 
 .picker-option[aria-selected="true"] {
-    background: #1f1f1f;
+    background: #2e2e2e;
     color: var(--green);
 }
