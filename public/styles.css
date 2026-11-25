@@ -415,6 +415,15 @@ select {
     background-color: transparent;
     background-position: right 0 center;
     font-size: 11px;
+    /* The value and the list that drops down were still white on top of the
+       green, which made the boxes look unchanged. */
+    color: var(--green);
+    color-scheme: dark;
+}
+
+.picker-field select option {
+    background: #1b2620;
+    color: var(--ink);
 }
 
 .quick-links {
