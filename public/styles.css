@@ -1292,3 +1292,89 @@ select {
         justify-content: flex-start;
     }
 }
+
+/* --- The picker lists -------------------------------------------------------
+   A native select opens a menu drawn by the operating system, so the white
+   popup could not be recoloured on a phone. The select stays in the page and
+   keeps driving the app; what the reader sees and taps is our own list. */
+.picker-native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.picker-control {
+    position: relative;
+}
+
+.picker-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--green);
+    font-family: var(--sans);
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+}
+
+.picker-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker-caret {
+    flex-shrink: 0;
+    font-size: 9px;
+    color: var(--green-dark);
+}
+
+.picker-list {
+    position: absolute;
+    z-index: 60;
+    top: calc(100% + 7px);
+    left: -10px;
+    right: -10px;
+    max-height: 236px;
+    margin: 0;
+    padding: 5px;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid #35493c;
+    border-radius: 8px;
+    background: #1b2620;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .55);
+}
+
+.picker-option {
+    padding: 7px 9px;
+    border-radius: 5px;
+    color: var(--ink);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.picker-option:hover {
+    background: #2b3d31;
+    color: var(--green);
+}
+
+.picker-option[aria-selected="true"] {
+    background: #24322a;
+    color: var(--green);
+}

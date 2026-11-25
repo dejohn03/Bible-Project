@@ -56,17 +56,35 @@
           <label class="field-label" for="testament-select">TESTAMENT</label>
           <select id="testament-select"><option value="all">All books</option><option value="old">Old Testament</option><option value="new">New Testament</option></select>
           <div class="picker-grid">
-            <div class="picker-field">
+<div class="picker-field">
               <label class="field-label" for="book-select">BOOK</label>
-              <select id="book-select"></select>
+              <select id="book-select" class="picker-native"></select>
+              <div class="picker-control">
+                <button type="button" class="picker-button" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="picker-value"></span><span class="picker-caret" aria-hidden="true">▾</span>
+                </button>
+                <ul class="picker-list" role="listbox" aria-label="Book" hidden></ul>
+              </div>
             </div>
-            <div class="picker-field">
+<div class="picker-field">
               <label class="field-label" for="chapter-select">CHAPTER</label>
-              <select id="chapter-select"></select>
+              <select id="chapter-select" class="picker-native"></select>
+              <div class="picker-control">
+                <button type="button" class="picker-button" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="picker-value"></span><span class="picker-caret" aria-hidden="true">▾</span>
+                </button>
+                <ul class="picker-list" role="listbox" aria-label="Chapter" hidden></ul>
+              </div>
             </div>
-            <div class="picker-field">
+<div class="picker-field">
               <label class="field-label" for="verse-select">VERSE</label>
-              <select id="verse-select"></select>
+              <select id="verse-select" class="picker-native"></select>
+              <div class="picker-control">
+                <button type="button" class="picker-button" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="picker-value"></span><span class="picker-caret" aria-hidden="true">▾</span>
+                </button>
+                <ul class="picker-list" role="listbox" aria-label="Verse" hidden></ul>
+              </div>
             </div>
           </div>
           <div class="quick-links">

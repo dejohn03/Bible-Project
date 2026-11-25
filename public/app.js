@@ -600,4 +600,90 @@ document.addEventListener("keydown", event => {
 loadNotes();
 updateListenButton();
 
+/* ---------------- The picker lists ----------------
+   A native <select> opens a menu drawn by the operating system, so the white
+   popup could not be restyled on a phone. Each select stays in the page and
+   keeps driving the app exactly as before; the visible control is our own
+   list, which keeps the page's colours on every device. */
+const pickerFields = [];
+
+function closePickerLists(except) {
+  pickerFields.forEach(field => {
+    if (field === except) return;
+    const list = field.querySelector(".picker-list");
+    const button = field.querySelector(".picker-button");
+    if (list) list.hidden = true;
+    if (button) button.setAttribute("aria-expanded", "false");
+    field.classList.remove("picker-open");
+  });
+}
+
+function enhancePicker(field) {
+  const select = field.querySelector("select");
+  const button = field.querySelector(".picker-button");
+  const valueLabel = field.querySelector(".picker-value");
+  const list = field.querySelector(".picker-list");
+  if (!select || !button || !list || !valueLabel) return;
+  pickerFields.push(field);
+
+  function syncLabel() {
+    const option = select.options[select.selectedIndex];
+    valueLabel.textContent = option ? option.textContent : "";
+  }
+
+  function close() {
+    list.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+    field.classList.remove("picker-open");
+  }
+
+  function build() {
+    list.replaceChildren();
+    Array.from(select.options).forEach((option, index) => {
+      const item = document.createElement("li");
+      item.className = "picker-option";
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", index === select.selectedIndex ? "true" : "false");
+      item.textContent = option.textContent;
+      item.addEventListener("click", () => {
+        select.selectedIndex = index;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncLabel();
+        close();
+      });
+      list.append(item);
+    });
+  }
+
+  function open() {
+    closePickerLists(field);
+    build();
+    list.hidden = false;
+    button.setAttribute("aria-expanded", "true");
+    field.classList.add("picker-open");
+    const current = list.querySelector('[aria-selected="true"]');
+    if (current) current.scrollIntoView({ block: "nearest" });
+  }
+
+  button.addEventListener("click", event => {
+    event.stopPropagation();
+    if (list.hidden) open(); else close();
+  });
+
+  select.addEventListener("change", syncLabel);
+  // The book, chapter and verse options are rebuilt as the reader navigates,
+  // so the label and any open list follow whatever the select now holds.
+  new MutationObserver(() => {
+    syncLabel();
+    if (!list.hidden) build();
+  }).observe(select, { childList: true });
+  syncLabel();
+}
+
+document.querySelectorAll(".picker-field").forEach(enhancePicker);
+document.addEventListener("click", () => closePickerLists());
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closePickerLists();
+});
+
 populateBooks("Genesis"); populateChapters(1); loadChapter(currentBook,1);
