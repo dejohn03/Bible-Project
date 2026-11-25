@@ -386,20 +386,20 @@ select {
     grid-column: 1 / -1;
 }
 
-/* A green wash, not a grey tile: the three boxes are one navigation control and
-   should read as a group against the sidebar rather than blend into it. */
+/* Black, like the page, so the three boxes sit back into the sidebar instead of
+   showing a light tile. The green stays on the labels and values. */
 .picker-field {
     min-width: 0;
     padding: 8px 9px 9px;
-    border: 1px solid #35493c;
+    border: 1px solid #2e2e2e;
     border-radius: 8px;
-    background: var(--green-pale);
+    background: var(--paper);
     transition: border-color .18s ease, background .18s ease;
 }
 
 .picker-field:focus-within {
     border-color: var(--green-dark);
-    background: #2c3f33;
+    background: #171717;
 }
 
 .picker-field .field-label {
@@ -1352,9 +1352,9 @@ select {
     padding: 5px;
     overflow-y: auto;
     list-style: none;
-    border: 1px solid #35493c;
+    border: 1px solid #2e2e2e;
     border-radius: 8px;
-    background: #1b2620;
+    background: var(--paper);
     box-shadow: 0 16px 34px rgba(0, 0, 0, .55);
 }
 
@@ -1370,11 +1370,11 @@ select {
 }
 
 .picker-option:hover {
-    background: #2b3d31;
+    background: #1f1f1f;
     color: var(--green);
 }
 
 .picker-option[aria-selected="true"] {
-    background: #24322a;
+    background: #1f1f1f;
     color: var(--green);
 }
